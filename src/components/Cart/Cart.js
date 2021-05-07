@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import React, { useContext, useState } from "react";
 import Modal from "../UI/Modal";
 import CartItem from "./CartItem";
 import classes from "./Cart.module.css";
@@ -8,6 +8,8 @@ import Checkout from "./Checkout";
 const Cart = (props) => {
   const cartCtx = useContext(CartContext);
   const [checkout, setCheckout] = useState(false);
+  const [uploadingData, setUploadingData] = useState(false);
+  const [uploadedData, setUploadedData] = useState(false);
 
   const totalAmount = `$${cartCtx.totalAmount.toFixed(2)}`;
   const hasItems = cartCtx.items.length > 0;
@@ -24,15 +26,21 @@ const Cart = (props) => {
     setCheckout(true);
   };
 
-  const onSubmitHandler = (userData) => {
-    console.log(userData);
-    fetch("https://react-http-46554-default-rtdb.firebaseio.com/orders.json", {
-      method: "POST",
-      body: JSON.stringify({
-        user: userData,
-        orderedItems: cartCtx.items,
-      }),
-    });
+  const onSubmitHandler = async (userData) => {
+    setUploadingData(true);
+    await fetch(
+      "https://react-http-46554-default-rtdb.firebaseio.com/orders.json",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          user: userData,
+          orderedItems: cartCtx.items,
+        }),
+      }
+    );
+    setUploadingData(false);
+    setUploadedData(true);
+    cartCtx.clearCart();
   };
 
   const actionButtons = (
@@ -65,8 +73,8 @@ const Cart = (props) => {
     </ul>
   );
 
-  return (
-    <Modal hideCart={props.hideCart}>
+  const modalData = (
+    <React.Fragment>
       {cartItems}
       <div className={classes.total}>
         <span>Total Amount</span>
@@ -76,6 +84,23 @@ const Cart = (props) => {
         <Checkout onSubmit={onSubmitHandler} onCancel={props.hideCart} />
       )}
       {!checkout && actionButtons}
+    </React.Fragment>
+  );
+
+  return (
+    <Modal hideCart={props.hideCart}>
+      {!uploadingData && !uploadedData && modalData}
+      {uploadingData && <p>Uploading Data to the server.</p>}
+      {uploadedData && (
+        <React.Fragment>
+          <p>Uploaded Data. You will be contacted soon!</p>
+          <div className={classes.actions}>
+            <button className={classes["button--alt"]} onClick={props.hideCart}>
+              Close
+            </button>
+          </div>
+        </React.Fragment>
+      )}
     </Modal>
   );
 };
